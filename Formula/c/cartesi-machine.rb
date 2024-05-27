@@ -37,9 +37,8 @@ class CartesiMachine < Formula
     resource("pristine-hash").stage "uarch"
     resource("pristine-ram").stage "uarch"
 
-    system "cat", "Makefile"
     system "make", "BREW_PREFIX=#{prefix}"
-    system "make", "install-shared-libs", "-j1", "-d", "PREFIX=#{prefix}"
+    system "make", "install", "PREFIX=#{prefix}"
   end
 
   test do
