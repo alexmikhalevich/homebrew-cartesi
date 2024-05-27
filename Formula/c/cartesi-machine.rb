@@ -6,6 +6,7 @@ class CartesiMachine < Formula
   license "LGPL-3.0-only"
 
   bottle do
+    root_url "https://ghcr.io/v2/alexmikhalevich/blobs"
     sha256 arm64_sonoma:        "a81c2667be2e1982b8287d3e46612c5463e61a53cff792b965709b953c5825f8"
     sha256 x86_64_linux:        "37924e1d7fdf3215941063b80d6eb3b96019a6c849dbe8616cb278216d97bc52"
   end
@@ -36,8 +37,9 @@ class CartesiMachine < Formula
     resource("pristine-hash").stage "uarch"
     resource("pristine-ram").stage "uarch"
 
-    system "make", "HOMEBREW_FORMULAE_BUILD_PREFIX=#{prefix}"
-    system "make", "install", "PREFIX=#{prefix}"
+    system "cat", "Makefile"
+    system "make", "BREW_PREFIX=#{prefix}"
+    system "make", "install-shared-libs", "-j1", "-d", "PREFIX=#{prefix}"
   end
 
   test do
@@ -45,46 +47,57 @@ class CartesiMachine < Formula
   end
 end
 __END__
+diff --git a/Makefile b/Makefile
+index f33e9c8..a111433 100644
+--- a/Makefile
++++ b/Makefile
+@@ -335,9 +335,6 @@ install-static-libs: $(LIB_INSTALL_PATH)
+ 
+ install-shared-libs: $(LIB_INSTALL_PATH)
+ 	$(INSTALL_EXEC) $(EMU_TO_LIB) $(LIB_INSTALL_PATH)
+-	$(SYMLINK) $(LIBCARTESI_SO) $(LIB_INSTALL_PATH)/$(LIBCARTESI)
+-	$(SYMLINK) $(LIBCARTESI_SO_JSONRPC) $(LIB_INSTALL_PATH)/$(LIBCARTESI_JSONRPC)
+-	$(STRIP_SHARED) $(subst src/,$(LIB_INSTALL_PATH)/,$(EMU_TO_LIB))
+ 
+ install-lua-libs: $(LUA_INSTALL_PATH)/cartesi $(LUA_INSTALL_CPATH)/cartesi
+ 	$(INSTALL_FILE) $(EMU_LUA_TO_BIN) $(LUA_INSTALL_PATH)
 diff --git a/src/Makefile b/src/Makefile
-index 2a02886..11c0136 100644
+index 2a02886..f292acb 100644
 --- a/src/Makefile
 +++ b/src/Makefile
-@@ -66,11 +66,13 @@ CXX=clang++
+@@ -66,27 +66,30 @@ CXX=clang++
  AR=libtool -static -o
  INCS=
  
-+HOMEBREW_FORMULAE_BUILD_PREFIX=
++BREW_PREFIX=$(shell which brew)
++PORT_PREFIX=$(shell which port)
 +
  ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
  export MACOSX_DEPLOYMENT_TARGET := $(shell sw_vers -productVersion | sed -E "s/([[:digit:]]+)\.([[:digit:]]+)\..+/\1.\2.0/")
  endif
  
--# Homebrew installation
-+# Homebrew installation - building from source
- ifneq (,$(shell which brew))
- BREW_PREFIX = $(shell brew --prefix)
+ # Homebrew installation
+-ifneq (,$(shell which brew))
+-BREW_PREFIX = $(shell brew --prefix)
++ifneq (,$(BREW_PREFIX))
  BOOST_LIB_DIR=-L$(BREW_PREFIX)/lib
-@@ -78,6 +80,14 @@ BOOST_INC=-I$(BREW_PREFIX)/include
+ BOOST_INC=-I$(BREW_PREFIX)/include
  SLIRP_LIB=-L$(BREW_PREFIX)/lib -lslirp
  SLIRP_INC=-I$(BREW_PREFIX)/libslirp/include
  
-+# Homebrew installation - building from formulae
-+else ifneq (,$(HOMEBREW_FORMULAE_BUILD_PREFIX))
-+BREW_PREFIX = $(HOMEBREW_FORMULAE_BUILD_PREFIX)
-+BOOST_LIB_DIR=-L$(BREW_PREFIX)/lib
-+BOOST_INC=-I$(BREW_PREFIX)/include
-+SLIRP_LIB=-L$(BREW_PREFIX)/lib -lslirp
-+SLIRP_INC=-I$(BREW_PREFIX)/libslirp/include
-+
  # Macports installation
- else ifneq (,$(shell which port))
- PORT_PREFIX = /opt/local
-@@ -86,7 +96,7 @@ BOOST_INC=-I$(PORT_PREFIX)/libexec/boost/1.81/include
+-else ifneq (,$(shell which port))
+-PORT_PREFIX = /opt/local
++else ifneq (,$(PORT_PREFIX))
+ BOOST_LIB_DIR=-L$(PORT_PREFIX)/libexec/boost/1.81/lib
+ BOOST_INC=-I$(PORT_PREFIX)/libexec/boost/1.81/include
  SLIRP_LIB=-L$(PORT_PREFIX)/lib -lslirp
  SLIRP_INC=-I$(PORT_PREFIX)/include
++
  else
 -$(error Neither Homebrew nor MacPorts is installed)
-+$(warning Neither Homebrew nor MacPorts is installed)
++$(warning BREW_PREFIX=$(BREW_PREFIX))
++$(warning Neither Homebrew nor MacPorts prefix found)
  endif
  
  LIBCARTESI=libcartesi-$(EMULATOR_VERSION_MAJOR).$(EMULATOR_VERSION_MINOR).dylib
