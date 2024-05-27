@@ -6,9 +6,10 @@ class CartesiMachine < Formula
   license "LGPL-3.0-only"
 
   bottle do
-    root_url "https://ghcr.io/v2/alexmikhalevich/blobs"
-    sha256 arm64_sonoma:        "a81c2667be2e1982b8287d3e46612c5463e61a53cff792b965709b953c5825f8"
-    sha256 x86_64_linux:        "37924e1d7fdf3215941063b80d6eb3b96019a6c849dbe8616cb278216d97bc52"
+    root_url "https://github.com/alexmikhalevich/homebrew-cartesi/releases/download/cartesi-machine-0.17.0"
+    rebuild 1
+    sha256 cellar: :any,                 arm64_sonoma: "d19fc6fe85fbb38d355b1bb3c6de8372f1d51f3197468874c1bbec373c90aab2"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "b696692945aaea318ea0c269f27060a1ee1f0587e1fe71e90ff669c66ba68228"
   end
 
   depends_on "pkg-config" => :build
